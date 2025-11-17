@@ -13,4 +13,8 @@ Antes de iniciar, asegúrate de tener instalado:
 - **Git**  
 - **PowerShell** (Windows Terminal recomendado)
 
+- HACER COMANDOS DENTRO DE CARPETA
+- docker-compose pull
+- docker-compose up -d
+
 
