@@ -1,0 +1,90 @@
+services:
+  coreA:
+    image: ubuntu:22.04
+    container_name: coreA
+    privileged: true
+    command: ["/bin/sh", "-c", "apt update && apt install -y iproute2 iputils-ping && ip addr add 10.0.10.254/24 dev eth0 && ip addr add 10.0.40.2/24 dev eth1 && ip addr add 10.0.30.2/24 dev eth2 && ip link set eth0 up && ip link set eth1 up && ip link set eth2 up && echo 1 > /proc/sys/net/ipv4/ip_forward && echo 'coreA READY' && tail -f /dev/null"]
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.254
+      net_fw_core:
+        ipv4_address: 10.0.40.2
+      net_san:
+        ipv4_address: 10.0.30.2
+
+  coreB:
+    image: ubuntu:22.04
+    container_name: coreB
+    privileged: true
+    command: ["/bin/sh", "-c", "apt update && apt install -y iproute2 iputils-ping && ip addr add 10.0.20.254/24 dev eth0 && ip addr add 10.0.40.3/24 dev eth1 && ip addr add 10.0.30.3/24 dev eth2 && ip link set eth0 up && ip link set eth1 up && ip link set eth2 up && echo 1 > /proc/sys/net/ipv4/ip_forward && echo 'coreB READY' && tail -f /dev/null"]
+    networks:
+      net_access_b:
+        ipv4_address: 10.0.20.254
+      net_fw_core:
+        ipv4_address: 10.0.40.3
+      net_san:
+        ipv4_address: 10.0.30.3
+
+  server1:
+    image: ubuntu:22.04
+    container_name: server1
+    privileged: true
+    command: ["/bin/sh", "-c", "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.10.254 && echo 'server1 READY' && tail -f /dev/null"]
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.10
+
+  server3:
+    image: ubuntu:22.04
+    container_name: server3
+    privileged: true
+    command: ["/bin/sh", "-c", "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.20.254 && echo 'server3 READY' && tail -f /dev/null"]
+    networks:
+      net_access_b:
+        ipv4_address: 10.0.20.10
+
+  nas:
+    image: ubuntu:22.04
+    container_name: nas
+    privileged: true
+    command: ["/bin/sh", "-c", "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.30.2 && echo 'nas READY' && tail -f /dev/null"]
+    networks:
+      net_san:
+        ipv4_address: 10.0.30.10
+
+  firewall:
+    image: ubuntu:22.04
+    container_name: firewall
+    privileged: true
+    command: ["/bin/sh", "-c", "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.50.1 && echo 'firewall READY' && tail -f /dev/null"]
+    networks:
+      net_fw_core:
+        ipv4_address: 10.0.40.254
+      net_wan:
+        ipv4_address: 10.0.50.2
+
+networks:
+  net_access_a:
+    ipam:
+      config:
+        - subnet: 10.0.10.0/24
+
+  net_access_b:
+    ipam:
+      config:
+        - subnet: 10.0.20.0/24
+
+  net_fw_core:
+    ipam:
+      config:
+        - subnet: 10.0.40.0/24
+
+  net_san:
+    ipam:
+      config:
+        - subnet: 10.0.30.0/24
+
+  net_wan:
+    ipam:
+      config:
+        - subnet: 10.0.50.0/24
