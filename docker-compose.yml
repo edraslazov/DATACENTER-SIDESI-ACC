@@ -78,6 +78,15 @@ services:
       net_wan:
         ipv4_address: 10.0.50.2
 
+  dns1:
+    build:
+      context: ./dns1
+    container_name: dns1
+    privileged: true
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.20
+
 networks:
   net_access_a:
     ipam:
