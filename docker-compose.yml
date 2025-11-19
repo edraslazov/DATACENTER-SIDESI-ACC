@@ -1,14 +1,9 @@
 services:
-  coreA:
-    image: ubuntu:22.04
+  core_a:
+    build:
+      context: ./coreA
     container_name: coreA
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip addr add 10.0.10.254/24 dev eth0 && ip addr add 10.0.40.2/24 dev eth1 && ip addr add 10.0.30.2/24 dev eth2 && ip link set eth0 up && ip link set eth1 up && ip link set eth2 up && echo 1 > /proc/sys/net/ipv4/ip_forward && echo 'coreA READY' && tail -f /dev/null",
-      ]
     networks:
       net_access_a:
         ipv4_address: 10.0.10.254
@@ -17,16 +12,11 @@ services:
       net_san:
         ipv4_address: 10.0.30.2
 
-  coreB:
-    image: ubuntu:22.04
+  core_b:
+    build:
+      context: ./coreB
     container_name: coreB
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip addr add 10.0.20.254/24 dev eth0 && ip addr add 10.0.40.3/24 dev eth1 && ip addr add 10.0.30.3/24 dev eth2 && ip link set eth0 up && ip link set eth1 up && ip link set eth2 up && echo 1 > /proc/sys/net/ipv4/ip_forward && echo 'coreB READY' && tail -f /dev/null",
-      ]
     networks:
       net_access_b:
         ipv4_address: 10.0.20.254
@@ -36,63 +26,66 @@ services:
         ipv4_address: 10.0.30.3
 
   dhcp1:
-    build: ./dhcp1
+    build:
+      context: ./dhcp1
     container_name: dhcp1
     privileged: true
     networks:
       net_access_a:
         ipv4_address: 10.0.10.10
 
-  clienta:
-    build: ./clienta
+  client_a:
+    build:
+      context: ./clients/clientA
     container_name: clientA
     privileged: true
     networks:
       net_access_a: {}
 
-  server3:
-    image: ubuntu:22.04
-    container_name: server3
+  dhcp2:
+    build:
+      context: ./dhcp2
+    container_name: dhcp2
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.20.254 && echo 'server3 READY' && tail -f /dev/null",
-      ]
     networks:
       net_access_b:
         ipv4_address: 10.0.20.10
 
+  client_b:
+    build:
+      context: ./clients/clientB
+    container_name: clientB
+    privileged: true
+    networks:
+      net_access_b: {}
+
   nas:
-    image: ubuntu:22.04
+    build: ./nas
     container_name: nas
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.30.2 && echo 'nas READY' && tail -f /dev/null",
-      ]
     networks:
       net_san:
         ipv4_address: 10.0.30.10
 
   firewall:
-    image: ubuntu:22.04
+    build:
+      context: ./firewall
     container_name: firewall
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.50.1 && echo 'firewall READY' && tail -f /dev/null",
-      ]
     networks:
       net_fw_core:
         ipv4_address: 10.0.40.254
       net_wan:
         ipv4_address: 10.0.50.2
+
+  dns1:
+    build:
+      context: ./dns1
+    container_name: dns1
+    privileged: true
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.20
 
 networks:
   net_access_a:
