@@ -1,0 +1,5 @@
+usuario1 Cleartext-Password := "clave123"
+    Reply-Message := "Bienvenido al AAA SIDESI"
+
+admin-net Cleartext-Password := "AdminS1d3s1!"
+    Reply-Message := "Acceso administrativo a red"

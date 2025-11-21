@@ -87,6 +87,15 @@ services:
       net_access_a:
         ipv4_address: 10.0.10.20
 
+  aaa:
+    build:
+      context: ./aaa
+    container_name: aaa
+    privileged: true
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.30
+
 networks:
   net_access_a:
     ipam:
