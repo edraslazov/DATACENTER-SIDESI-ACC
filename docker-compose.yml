@@ -77,6 +77,18 @@ services:
         ipv4_address: 10.0.40.254
       net_wan:
         ipv4_address: 10.0.50.2
+      net_dmz:
+        ipv4_address: 10.0.60.254
+
+  web_dmz:
+    image: nginx:alpine
+    container_name: web_dmz
+    restart: unless-stopped
+    networks:
+      net_dmz:
+        ipv4_address: 10.0.60.10
+    ports:
+      - "8080:80"
 
   dns1:
     build:
@@ -95,6 +107,59 @@ services:
     networks:
       net_access_a:
         ipv4_address: 10.0.10.30
+
+  zabbix-mysql:
+    image: mysql:8.0
+    container_name: zabbix-mysql
+    command: >
+      --character-set-server=utf8
+      --collation-server=utf8mb3_bin
+      --default-authentication-plugin=mysql_native_password
+      --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - zbx_db:/var/lib/mysql
+    networks:
+      net_fw_core:
+        ipv4_address: 10.0.40.60
+
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:alpine-latest
+    container_name: zabbix-server
+    depends_on:
+      - zabbix-mysql
+    environment:
+      DB_SERVER_HOST: zabbix-mysql
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+    networks:
+      net_fw_core:
+        ipv4_address: 10.0.40.61
+
+  zabbix-frontend:
+    image: zabbix/zabbix-web-nginx-mysql:alpine-latest
+    container_name: zabbix-frontend
+    depends_on:
+      - zabbix-server
+      - zabbix-mysql
+    environment:
+      DB_SERVER_HOST: zabbix-mysql
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      PHP_TZ: America/El_Salvador
+    ports:
+      - "8081:8080"
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.51
+      net_fw_core:
+        ipv4_address: 10.0.40.62
 
 networks:
   net_access_a:
@@ -121,3 +186,13 @@ networks:
     ipam:
       config:
         - subnet: 10.0.50.0/24
+
+  net_dmz:
+    ipam:
+      config:
+        - subnet: 10.0.60.0/24
+
+volumes:
+  zbx_db:
+  zbx_data:
+  zbx_conf:
