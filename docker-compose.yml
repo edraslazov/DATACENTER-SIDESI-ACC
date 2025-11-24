@@ -179,8 +179,6 @@ services:
       -s "Privado;/shared;yes;no;no;usuario1,usuario2"
     restart: always
 
-
-
 networks:
   net_access_a:
     ipam:

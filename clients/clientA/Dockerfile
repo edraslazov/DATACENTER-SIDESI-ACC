@@ -1,7 +1,7 @@
 FROM ubuntu:22.04
 
 RUN apt update && \
-    apt install -y isc-dhcp-client iproute2 iputils-ping dnsutils freeradius-utils && \
+    apt install -y isc-dhcp-client iproute2 iputils-ping dnsutils freeradius-utils smbclient && \
     rm -rf /var/lib/apt/lists/*
 
 CMD ["/bin/sh", "-c", "\
