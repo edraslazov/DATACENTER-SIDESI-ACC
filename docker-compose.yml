@@ -161,6 +161,26 @@ services:
       net_fw_core:
         ipv4_address: 10.0.40.62
 
+  # ---------------------------------------
+  # AQUI SE AGREGA EL SERVIDOR SAMBA
+  # ---------------------------------------
+  samba:
+    image: dperson/samba
+    container_name: samba
+    privileged: true
+    networks:
+      net_san:
+        ipv4_address: 10.0.30.50
+    volumes:
+      - "C:/samba/privado:/shared"
+    command: >
+      -u "usuario1;password1"
+      -u "usuario2;password2"
+      -s "Privado;/shared;yes;no;no;usuario1,usuario2"
+    restart: always
+
+
+
 networks:
   net_access_a:
     ipam:

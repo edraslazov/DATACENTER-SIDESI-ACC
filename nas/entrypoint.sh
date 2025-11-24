@@ -1,11 +1,15 @@
 #!/bin/sh
 
-# IP SAN del NAS
-ip addr add 10.0.30.10/24 dev eth0
-ip link set eth0 up
+# Crear directorio compartido si no existe
+mkdir -p /srv/samba/share
+chmod 777 /srv/samba/share
 
-# Gateway -> coreA
-ip route add default via 10.0.30.2
+# Configurar Samba
+echo "Configurando usuario Samba..."
+(echo "samba"; echo "samba") | smbpasswd -a -s root
 
-echo "nas READY"
-tail -f /dev/null
+# Iniciar Samba en primer plano con más logs
+echo "Iniciando servidor Samba..."
+
+# Iniciar Samba con más verbosidad
+exec smbd -F -p 2139 -p 2445 -d=3 --no-process-group
