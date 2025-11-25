@@ -1,29 +1,23 @@
-#!/bin/sh
+#!/bin/bash
 
-# IPs en cada interfaz
-ip addr add 10.0.10.254/24 dev eth0   # LAN A
-ip addr add 10.0.40.2/24  dev eth1   # Core / FW
-ip addr add 10.0.30.2/24  dev eth2   # SAN
-
-ip link set eth0 up
-ip link set eth1 up
-ip link set eth2 up
-
-# Habilitar enrutamiento
+# Habilitar enrutamiento (Convertirlo en Router)
 echo 1 > /proc/sys/net/ipv4/ip_forward
 
-# Limpiar default
+# Eliminar la puerta de enlace por defecto que Docker pone (que suele ser la del bridge)
+# para que podamos poner la nuestra (el Firewall).
 ip route del default 2>/dev/null || true
 
-# redes locales
-ip route add 10.0.10.0/24 dev eth0
-ip route add 10.0.30.0/24 dev eth2
+# --- RUTAS ESTÁTICAS ---
 
-# Ruta LAN B (10.0.20.0/24) via coreB en la red de core
+# 1. ¿Cómo llegar a la LAN B (10.0.20.x)?
+# Saltamos hacia la pata del Core B que está en nuestra misma red (10.0.40.3)
 ip route add 10.0.20.0/24 via 10.0.40.3
 
-# hacia el firewall
+# 2. Ruta por defecto (Internet/WAN)
+# Todo lo que no sea LAN A o LAN B, se lo tiramos al Firewall
 ip route add default via 10.0.40.254
 
-echo "coreA READY"
+echo "CoreA READY - Routing Table:"
+ip route
+# Mantener vivo
 tail -f /dev/null
