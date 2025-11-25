@@ -140,6 +140,10 @@ services:
     networks:
       net_fw_core:
         ipv4_address: 10.0.40.61
+      net_access_a:
+        ipv4_address: 10.0.10.250
+      net_access_b:
+        ipv4_address: 10.0.20.250
 
   zabbix-frontend:
     image: zabbix/zabbix-web-nginx-mysql:alpine-latest
@@ -152,6 +156,8 @@ services:
       MYSQL_DATABASE: zabbix
       MYSQL_USER: zabbix
       MYSQL_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_PORT: 10051
       PHP_TZ: America/El_Salvador
     ports:
       - "8081:8080"
