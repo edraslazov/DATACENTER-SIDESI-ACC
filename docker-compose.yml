@@ -185,6 +185,19 @@ services:
       -s "Privado;/shared;yes;no;no;usuario1,usuario2"
     restart: always
 
+  printserver:
+    build:
+      context: ./printserver
+    container_name: printserver
+    ports:
+      - "631:631"
+    volumes:
+      - print_data:/etc/cups
+      - print_spool:/var/spool/cups
+    networks:
+      - net_access_a
+    restart: always
+
 networks:
   net_access_a:
     ipam:
@@ -220,3 +233,5 @@ volumes:
   zbx_db:
   zbx_data:
   zbx_conf:
+  print_data:
+  print_spool:
