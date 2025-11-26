@@ -1,14 +1,9 @@
 services:
-  coreA:
-    image: ubuntu:22.04
+  core_a:
+    build:
+      context: ./coreA
     container_name: coreA
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip addr add 10.0.10.254/24 dev eth0 && ip addr add 10.0.40.2/24 dev eth1 && ip addr add 10.0.30.2/24 dev eth2 && ip link set eth0 up && ip link set eth1 up && ip link set eth2 up && echo 1 > /proc/sys/net/ipv4/ip_forward && echo 'coreA READY' && tail -f /dev/null",
-      ]
     networks:
       net_access_a:
         ipv4_address: 10.0.10.254
@@ -17,16 +12,11 @@ services:
       net_san:
         ipv4_address: 10.0.30.2
 
-  coreB:
-    image: ubuntu:22.04
+  core_b:
+    build:
+      context: ./coreB
     container_name: coreB
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip addr add 10.0.20.254/24 dev eth0 && ip addr add 10.0.40.3/24 dev eth1 && ip addr add 10.0.30.3/24 dev eth2 && ip link set eth0 up && ip link set eth1 up && ip link set eth2 up && echo 1 > /proc/sys/net/ipv4/ip_forward && echo 'coreB READY' && tail -f /dev/null",
-      ]
     networks:
       net_access_b:
         ipv4_address: 10.0.20.254
@@ -36,63 +26,177 @@ services:
         ipv4_address: 10.0.30.3
 
   dhcp1:
-    build: ./dhcp1
+    build:
+      context: ./dhcp1
     container_name: dhcp1
     privileged: true
     networks:
       net_access_a:
         ipv4_address: 10.0.10.10
 
-  clienta:
-    build: ./clienta
+  client_a:
+    build:
+      context: ./clients/clientA
     container_name: clientA
     privileged: true
     networks:
       net_access_a: {}
 
-  server3:
-    image: ubuntu:22.04
-    container_name: server3
+  dhcp2:
+    build:
+      context: ./dhcp2
+    container_name: dhcp2
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.20.254 && echo 'server3 READY' && tail -f /dev/null",
-      ]
     networks:
       net_access_b:
         ipv4_address: 10.0.20.10
 
+  client_b:
+    build:
+      context: ./clients/clientB
+    container_name: clientB
+    privileged: true
+    networks:
+      net_access_b: {}
+
   nas:
-    image: ubuntu:22.04
+    build: ./nas
     container_name: nas
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.30.2 && echo 'nas READY' && tail -f /dev/null",
-      ]
     networks:
       net_san:
         ipv4_address: 10.0.30.10
 
   firewall:
-    image: ubuntu:22.04
+    build:
+      context: ./firewall
     container_name: firewall
     privileged: true
-    command:
-      [
-        "/bin/sh",
-        "-c",
-        "apt update && apt install -y iproute2 iputils-ping && ip route del default 2>/dev/null || true && ip route add default via 10.0.50.1 && echo 'firewall READY' && tail -f /dev/null",
-      ]
     networks:
       net_fw_core:
         ipv4_address: 10.0.40.254
       net_wan:
         ipv4_address: 10.0.50.2
+      net_dmz:
+        ipv4_address: 10.0.60.254
+
+  web_dmz:
+    image: nginx:alpine
+    container_name: web_dmz
+    restart: unless-stopped
+    networks:
+      net_dmz:
+        ipv4_address: 10.0.60.10
+    ports:
+      - "8080:80"
+
+  dns1:
+    build:
+      context: ./dns1
+    container_name: dns1
+    privileged: true
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.20
+
+  aaa:
+    build:
+      context: ./aaa
+    container_name: aaa
+    privileged: true
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.30
+
+  zabbix-mysql:
+    image: mysql:8.0
+    container_name: zabbix-mysql
+    command: >
+      --character-set-server=utf8
+      --collation-server=utf8mb3_bin
+      --default-authentication-plugin=mysql_native_password
+      --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      MYSQL_ROOT_PASSWORD: rootpass
+    volumes:
+      - zbx_db:/var/lib/mysql
+    networks:
+      net_fw_core:
+        ipv4_address: 10.0.40.60
+
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:alpine-latest
+    container_name: zabbix-server
+    depends_on:
+      - zabbix-mysql
+    environment:
+      DB_SERVER_HOST: zabbix-mysql
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+    networks:
+      net_fw_core:
+        ipv4_address: 10.0.40.61
+      net_access_a:
+        ipv4_address: 10.0.10.250
+      net_access_b:
+        ipv4_address: 10.0.20.250
+
+  zabbix-frontend:
+    image: zabbix/zabbix-web-nginx-mysql:alpine-latest
+    container_name: zabbix-frontend
+    depends_on:
+      - zabbix-server
+      - zabbix-mysql
+    environment:
+      DB_SERVER_HOST: zabbix-mysql
+      MYSQL_DATABASE: zabbix
+      MYSQL_USER: zabbix
+      MYSQL_PASSWORD: zabbix
+      ZBX_SERVER_HOST: zabbix-server
+      ZBX_SERVER_PORT: 10051
+      PHP_TZ: America/El_Salvador
+    ports:
+      - "8081:8080"
+    networks:
+      net_access_a:
+        ipv4_address: 10.0.10.51
+      net_fw_core:
+        ipv4_address: 10.0.40.62
+
+  # ---------------------------------------
+  # AQUI SE AGREGA EL SERVIDOR SAMBA
+  # ---------------------------------------
+  samba:
+    image: dperson/samba
+    container_name: samba
+    privileged: true
+    networks:
+      net_san:
+        ipv4_address: 10.0.30.50
+    volumes:
+      - "C:/samba/privado:/shared"
+    command: >
+      -u "usuario1;password1"
+      -u "usuario2;password2"
+      -s "Privado;/shared;yes;no;no;usuario1,usuario2"
+    restart: always
+
+  printserver:
+    build:
+      context: ./printserver
+    container_name: printserver
+    ports:
+      - "631:631"
+    volumes:
+      - print_data:/etc/cups
+      - print_spool:/var/spool/cups
+    networks:
+      - net_access_a
+    restart: always
 
 networks:
   net_access_a:
@@ -119,3 +223,15 @@ networks:
     ipam:
       config:
         - subnet: 10.0.50.0/24
+
+  net_dmz:
+    ipam:
+      config:
+        - subnet: 10.0.60.0/24
+
+volumes:
+  zbx_db:
+  zbx_data:
+  zbx_conf:
+  print_data:
+  print_spool:
